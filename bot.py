@@ -8,12 +8,12 @@ from telegram.ext import (
     ContextTypes, filters
 )
 
-# ✅ Variabili ambiente
+# 📦 Variabili d’ambiente
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 SUPERVISOR_CHAT_ID = int(os.environ["SUPERVISOR_CHAT_ID"])
 WEBHOOK_URL = os.environ["WEBHOOK_URL"]
 
-# 🎯 Logging visivo
+# 📝 Logging
 logging.basicConfig(format='[%(levelname)s] %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ user_state = {}
 flask_app = Flask(__name__)
 telegram_app = Application.builder().token(BOT_TOKEN).updater(None).build()
 
-# 🟢 /start
+# ✅ /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("IPTV", callback_data="IPTV")],
@@ -36,7 +36,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Benvenuto! Procediamo con l'acquisto automatizzato, a cosa sei interessato?",
         reply_markup=reply_markup
     )
-    log.info(f"[START] Utente {update.message.from_user.id}")
+    log.info(f"[START] Utente {update.message.from_user.id} ha avviato il bot")
 
 # 🟡 Scelta servizio
 async def scelta_servizio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -86,8 +86,41 @@ async def ricevi_codice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🎁 Codice Amazon: {codice}"
         )
         await context.bot.send_message(chat_id=SUPERVISOR_CHAT_ID, text=messaggio)
-        log.info(f"[CODICE] Ricevuto da {user_id}: {codice}")
+        log.info(f"[CODICE] {user_id}: {codice}")
         del user_state[user_id]
 
-# 📬 Webhook POST endpoint
-@flask_app.route('/web
+# 📬 Webhook endpoint
+@flask_app.route('/webhook', methods=['POST'])
+def telegram_webhook():
+    telegram_app.update_queue.put(Update.de_json(request.get_json(force=True), telegram_app.bot))
+    return Response(status=200)
+
+# 🔍 Health check
+@flask_app.route('/healthcheck')
+def health():
+    return "OK", 200
+
+# 🏠 Homepage
+@flask_app.route('/')
+def home():
+    return "Bot Telegram attivo su Render ✅", 200
+
+# ⏳ Avvio del bot
+async def main():
+    await telegram_app.bot.set_webhook(url=WEBHOOK_URL)
+    telegram_app.add_handler(CommandHandler("start", start))
+    telegram_app.add_handler(CallbackQueryHandler(scelta_servizio, pattern="^(IPTV|CALCIO|CINEMA)$"))
+    telegram_app.add_handler(CallbackQueryHandler(scelta_mesi, pattern="^(1|3)$"))
+    telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ricevi_codice))
+    await telegram_app.initialize()
+    await telegram_app.start()
+
+    # Blocca il processo finché Flask è attivo
+    await asyncio.Event().wait()
+
+# ▶️ Esecuzione finale
+if __name__ == "__main__":
+    asyncio.run(main())
+    port = int(os.environ.get("PORT", 10000))
+    print(f"▶️ Avvio Flask su http://0.0.0.0:{port}")
+    flask_app.run(host="0.0.0.0", port=port)
