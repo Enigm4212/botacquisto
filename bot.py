@@ -8,23 +8,23 @@ from telegram.ext import (
     ContextTypes, filters
 )
 
-# Variabili ambiente
+# ✅ Variabili ambiente
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 SUPERVISOR_CHAT_ID = int(os.environ["SUPERVISOR_CHAT_ID"])
 WEBHOOK_URL = os.environ["WEBHOOK_URL"]
 
-# Logging
+# 📝 Logging
 logging.basicConfig(format='[%(levelname)s] %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
 
-# Stato temporaneo utenti
+# 🗂️ Stato utente temporaneo
 user_state = {}
 
-# App Flask + Telegram
+# 🚀 Flask + Telegram App
 flask_app = Flask(__name__)
 telegram_app = Application.builder().token(BOT_TOKEN).updater(None).build()
 
-# Comando /start
+# 🟢 /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("IPTV", callback_data="IPTV")],
@@ -38,7 +38,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     log.info(f"[START] Utente {update.message.from_user.id} ha avviato il bot")
 
-# Scelta servizio
+# 🟡 Scelta servizio
 async def scelta_servizio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -52,9 +52,9 @@ async def scelta_servizio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text("Quanti mesi vuoi acquistare?", reply_markup=reply_markup)
-    log.info(f"[SERVIZIO] {user_id} ha scelto {servizio}")
+    log.info(f"[SERVIZIO] {user_id} ha scelto: {servizio}")
 
-# Scelta durata
+# 🟠 Scelta durata
 async def scelta_mesi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -67,7 +67,7 @@ async def scelta_mesi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"Inserisci il codice del buono Amazon da {importo}:")
         log.info(f"[DURATA] {user_id} ha scelto {mesi} mese/i")
 
-# Ricezione codice
+# 🔴 Ricezione codice Amazon
 async def ricevi_codice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     codice = update.message.text
@@ -86,26 +86,26 @@ async def ricevi_codice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🎁 Codice Amazon: {codice}"
         )
         await context.bot.send_message(chat_id=SUPERVISOR_CHAT_ID, text=messaggio)
-        log.info(f"[CODICE] {user_id}: {codice}")
+        log.info(f"[CODICE] da {user_id}: {codice}")
         del user_state[user_id]
 
-# Webhook
+# 🌐 Webhook endpoint
 @flask_app.route('/webhook', methods=['POST'])
 def telegram_webhook():
     telegram_app.update_queue.put(Update.de_json(request.get_json(force=True), telegram_app.bot))
     return Response(status=200)
 
-# Health check
+# ✅ Health check
 @flask_app.route('/healthcheck')
 def health():
     return "OK", 200
 
-# Homepage facoltativa
+# 🏠 Homepage per test manuale
 @flask_app.route('/')
 def home():
     return "Bot Telegram attivo su Render ✅", 200
 
-# Avvio bot
+# ⏳ Avvio bot
 async def main():
     await telegram_app.bot.set_webhook(url=WEBHOOK_URL)
     telegram_app.add_handler(CommandHandler("start", start))
@@ -115,10 +115,10 @@ async def main():
     await telegram_app.initialize()
     await telegram_app.start()
 
-    # Mantieni il bot attivo finché Flask è in esecuzione
+    # Mantieni il bot attivo
     await asyncio.Event().wait()
 
-# Avvio finale
+# ▶️ Esecuzione finale
 if __name__ == "__main__":
     asyncio.run(main())
     port = int(os.environ.get("PORT", 10000))
