@@ -1,19 +1,19 @@
 import os
 import logging
+import asyncio
 from flask import Flask, request, Response
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, MessageHandler,
     ContextTypes, filters
 )
-import asyncio
 
 # ✅ Variabili ambiente
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 SUPERVISOR_CHAT_ID = int(os.environ["SUPERVISOR_CHAT_ID"])
 WEBHOOK_URL = os.environ["WEBHOOK_URL"]
 
-# 📋 Logging
+# 📝 Logging
 logging.basicConfig(format='[%(levelname)s] %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Benvenuto! Procediamo con l'acquisto automatizzato, a cosa sei interessato?",
         reply_markup=reply_markup
     )
-    log.info(f"[START] Utente {update.message.from_user.id} ha avviato il bot")
+    log.info(f"[START] Utente {update.message.from_user.id}")
 
 # 🟡 Scelta servizio
 async def scelta_servizio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -100,12 +100,12 @@ def telegram_webhook():
 def health():
     return "OK", 200
 
-# 🏠 Homepage
+# 🏠 Homepage facoltativa
 @flask_app.route('/')
 def home():
-    return "Bot Telegram attivo su Render ✅", 200
+    return "Bot Telegram attivo su Northflank ✅", 200
 
-# ⏳ Avvio bot Telegram (senza bloccare Flask)
+# ⏳ Avvio bot Telegram
 async def main():
     await telegram_app.bot.set_webhook(url=WEBHOOK_URL)
     telegram_app.add_handler(CommandHandler("start", start))
@@ -115,9 +115,9 @@ async def main():
     await telegram_app.initialize()
     await telegram_app.start()
 
-# ▶️ Avvio Flask separato
+# ▶️ Avvio Flask dopo Telegram
 if __name__ == "__main__":
-    asyncio.run(main())  # Telegram bot
-    port = int(os.environ.get("PORT", 10000))  # Render imposta PORT
+    asyncio.run(main())
+    port = int(os.environ.get("PORT", 10000))
     print(f"▶️ Avvio Flask su http://0.0.0.0:{port}")
     flask_app.run(host="0.0.0.0", port=port)
